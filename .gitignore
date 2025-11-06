@@ -1,3 +1,5 @@
 /Apertus-FT
 /logs
 /.deepspeed_env
+/data
+/my_datasets

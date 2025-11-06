@@ -20,9 +20,10 @@ accelerate launch \
     --model_name_or_path swiss-ai/Apertus-8B-Instruct-2509 \
 """
 
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import os
+from datetime import datetime
 from trl import (
     ModelConfig,
     ScriptArguments,
@@ -35,6 +36,14 @@ from trl import (
 
 
 def main(script_args, training_args, model_args):
+    # ------------------------
+    # Add timestamp to output directory
+    # ------------------------
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    original_output_dir = training_args.output_dir
+    training_args.output_dir = f"{original_output_dir}_{timestamp}"
+    print(f"📁 Output directory: {training_args.output_dir}")
+    
     # ------------------------
     # Load model & tokenizer
     # ------------------------
@@ -57,7 +66,23 @@ def main(script_args, training_args, model_args):
     # --------------
     # Load dataset
     # --------------
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    # Support both HuggingFace Hub datasets and local datasets
+    if os.path.exists(script_args.dataset_name):
+        # Load from local directory
+        if script_args.dataset_name.endswith('.jsonl') or script_args.dataset_name.endswith('.json'):
+            # Load from JSONL/JSON file
+            dataset = load_dataset("json", data_files=script_args.dataset_name)
+            print(f"✅ Loaded dataset from JSON file: {script_args.dataset_name}")
+        elif os.path.isdir(script_args.dataset_name):
+            # Load from disk (saved with save_to_disk)
+            dataset = load_from_disk(script_args.dataset_name)
+            print(f"✅ Loaded dataset from disk: {script_args.dataset_name}")
+        else:
+            raise ValueError(f"Unknown dataset format: {script_args.dataset_name}")
+    else:
+        # Load from HuggingFace Hub
+        dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+        print(f"✅ Loaded dataset from HuggingFace Hub: {script_args.dataset_name}")
 
     # -------------
     # Train model
