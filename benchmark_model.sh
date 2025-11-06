@@ -71,6 +71,13 @@ echo ""
     python test_model.py "$MODEL_PATH" "Explain in English the key differences between supervised and unsupervised learning, then give examples in French."
     echo ""
 
+    # Test 9: RGPD et protection des données
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "TEST 9: RGPD et protection des données (niveau DPO)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    python test_model.py "$MODEL_PATH" "Une entreprise européenne utilise un modèle d'IA entraîné sur des données clients pour prédire des comportements d'achat. Un client invoque son droit à l'effacement (Article 17 RGPD). Quelles sont les obligations légales de l'entreprise concernant: 1) les données d'entraînement, 2) le modèle déjà entraîné, 3) les prédictions déjà générées? Analyse les tensions entre droit à l'oubli et impossibilité technique de 'désapprendre' dans un modèle de ML."
+    echo ""
+
     echo "═══════════════════════════════════════════════════════════════════════════════"
     echo "✅ BENCHMARK TERMINÉ"
     echo "═══════════════════════════════════════════════════════════════════════════════"
