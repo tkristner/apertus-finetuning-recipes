@@ -44,6 +44,7 @@ python test.py [MODÈLE] [TYPE_TEST] [OPTIONS]
 - `--compare` → Compare BASE vs modèle fine-tuné
 - `--output <fichier>` → Sauvegarde les résultats (avec --benchmark)
 - `--max-tokens <N>` → Longueur max des réponses (défaut: 4096)
+- `--system-prompt <texte>` → Système prompt personnalisé (défaut: prompt du fine-tuning)
 
 ---
 

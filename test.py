@@ -76,6 +76,9 @@ BENCHMARK_QUESTIONS = [
 
 BASE_MODEL_NAME = "swiss-ai/Apertus-8B-Instruct-2509"
 
+# Système prompt utilisé pendant le fine-tuning
+DEFAULT_SYSTEM_PROMPT = "You are a helpful AI assistant specialized in data protection and privacy compliance."
+
 def load_base_model():
     """Charge le modèle de base sans LoRA"""
     print("🔄 Chargement du modèle de base...")
@@ -105,9 +108,21 @@ def load_finetuned_model(adapter_path):
     model.eval()
     return model, tokenizer
 
-def generate_response(model, tokenizer, question, max_tokens=4096):
+def generate_response(model, tokenizer, question, max_tokens=4096, system_prompt=None):
     """Génère une réponse à partir d'une question"""
-    messages = [{"role": "user", "content": question}]
+    if system_prompt is None:
+        system_prompt = DEFAULT_SYSTEM_PROMPT
+    
+    messages = [
+        {
+            "role": "system",
+            "content": system_prompt
+        },
+        {
+            "role": "user",
+            "content": question
+        }
+    ]
     input_text = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
@@ -126,11 +141,15 @@ def generate_response(model, tokenizer, question, max_tokens=4096):
             pad_token_id=tokenizer.eos_token_id
         )
     
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    # Décoder seulement les nouveaux tokens générés (pas le prompt)
+    generated_tokens = outputs[0][inputs.input_ids.shape[1]:]
+    response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
     
-    # Extraire seulement la réponse
-    if "<|im_start|>assistant" in response:
-        response = response.split("<|im_start|>assistant")[-1].strip()
+    # Nettoyer les balises résiduelles
+    if "<|im_end|>" in response:
+        response = response.split("<|im_end|>")[0]
+    
+    response = response.strip()
     
     return response
 
@@ -288,6 +307,7 @@ Exemples d'utilisation:
     parser.add_argument("--compare", action="store_true", help="Comparer BASE vs modèle fine-tuné")
     parser.add_argument("--output", type=str, help="Fichier de sortie pour sauvegarder les résultats")
     parser.add_argument("--max-tokens", type=int, default=4096, help="Nombre max de tokens à générer (défaut: 4096)")
+    parser.add_argument("--system-prompt", type=str, help=f"Système prompt personnalisé (défaut: '{DEFAULT_SYSTEM_PROMPT[:50]}...')")
     
     args = parser.parse_args()
     
