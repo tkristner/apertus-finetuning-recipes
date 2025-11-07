@@ -3,31 +3,31 @@ model_name_or_path: swiss-ai/Apertus-8B-Instruct-2509
 attn_implementation: flash_attention_2
 dtype: bfloat16
 
-# Dataset - Combined (RGPD + MetaMathQA)
-dataset_name: ./data/combined_dataset_hf
+# Dataset - Custom Mix Option C (60% Cyber / 40% Reasoning+Code+General)
+dataset_name: ./data/custom_mix_dataset_hf
 # For local datasets, these splits should match your dataset structure
 dataset_train_split: train
 dataset_test_split: test
 dataset_num_proc: 12
 
 # Hyperparameters
-learning_rate: 5.0e-5  # Reduced for better convergence
+learning_rate: 7.0e-5  # Reduced for better convergence
 gradient_checkpointing: true
-num_train_epochs: 5.0  # Adjust based on your dataset size
+num_train_epochs: 1.0  # Adjust based on your dataset size
 logging_steps: 1
 eval_strategy: steps
-eval_steps: 100
+eval_steps: 50
 save_strategy: steps
 save_steps: 200
-per_device_train_batch_size: 4
-gradient_accumulation_steps: 8
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 4
 max_grad_norm: 0.5  # Clip gradients to prevent instability
 
 # LoRA / PEFT
 use_peft: true
 lora_r: 32  # Increased for better capacity
-lora_alpha: 64  # 2x rank for better scaling
-lora_dropout: 0.05
+lora_alpha: 32  # 2x rank for better scaling
+lora_dropout: 0.1
 lora_target_modules: all-linear
 
 # Seq length & scheduler

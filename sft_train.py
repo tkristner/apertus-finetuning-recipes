@@ -23,7 +23,10 @@ accelerate launch \
 from datasets import load_dataset, load_from_disk
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import os
+import json
+import shutil
 from datetime import datetime
+from pathlib import Path
 from trl import (
     ModelConfig,
     ScriptArguments,
@@ -32,10 +35,11 @@ from trl import (
     TrlParser,
     get_peft_config,
 )
+from training_logger import AutomatedTrainingLogger
 
 
 
-def main(script_args, training_args, model_args):
+def main(script_args, training_args, model_args, config_file_path=None):
     # ------------------------
     # Add timestamp to output directory
     # ------------------------
@@ -43,6 +47,57 @@ def main(script_args, training_args, model_args):
     original_output_dir = training_args.output_dir
     training_args.output_dir = f"{original_output_dir}_{timestamp}"
     print(f"📁 Output directory: {training_args.output_dir}")
+
+    # ------------------------
+    # Save training configuration at startup
+    # ------------------------
+    os.makedirs(training_args.output_dir, exist_ok=True)
+
+    # Sauvegarder la config YAML utilisée
+    config_backup_dir = os.path.join(training_args.output_dir, 'config_backup')
+    os.makedirs(config_backup_dir, exist_ok=True)
+
+    # Copier la config YAML si elle existe
+    if config_file_path and os.path.exists(config_file_path):
+        shutil.copy(config_file_path, os.path.join(config_backup_dir, os.path.basename(config_file_path)))
+        print(f"✅ Config YAML sauvegardée: {os.path.join(config_backup_dir, os.path.basename(config_file_path))}")
+    else:
+        print(f"⚠️  Aucune config YAML à sauvegarder (config_file_path={config_file_path})")
+
+    # Sauvegarder les arguments de training en JSON
+    training_params = {
+        'timestamp': timestamp,
+        'model': {
+            'name_or_path': model_args.model_name_or_path,
+            'dtype': str(model_args.dtype),
+            'attn_implementation': model_args.attn_implementation,
+        },
+        'dataset': {
+            'name': script_args.dataset_name,
+            'train_split': script_args.dataset_train_split,
+            'test_split': script_args.dataset_test_split,
+        },
+        'training': {
+            'learning_rate': training_args.learning_rate,
+            'num_train_epochs': training_args.num_train_epochs,
+            'per_device_train_batch_size': training_args.per_device_train_batch_size,
+            'gradient_accumulation_steps': training_args.gradient_accumulation_steps,
+            'warmup_ratio': training_args.warmup_ratio,
+            'lr_scheduler_type': training_args.lr_scheduler_type,
+            'max_grad_norm': training_args.max_grad_norm,
+            'logging_steps': training_args.logging_steps,
+            'eval_strategy': training_args.eval_strategy,
+            'save_strategy': training_args.save_strategy,
+            'save_steps': training_args.save_steps,
+            'seed': training_args.seed,
+            'output_dir': training_args.output_dir,
+        }
+    }
+
+    params_file = os.path.join(training_args.output_dir, 'training_parameters.json')
+    with open(params_file, 'w', encoding='utf-8') as f:
+        json.dump(training_params, f, indent=2, ensure_ascii=False)
+    print(f"✅ Paramètres sauvegardés: {params_file}")
     
     # ------------------------
     # Load model & tokenizer
@@ -87,6 +142,9 @@ def main(script_args, training_args, model_args):
     # -------------
     # Train model
     # -------------
+    # Créer le callback de logging automatique
+    logging_callback = AutomatedTrainingLogger()
+
     trainer = SFTTrainer(
         model=model,
         args=training_args,
@@ -96,6 +154,7 @@ def main(script_args, training_args, model_args):
         else None,
         processing_class=tokenizer,
         peft_config=get_peft_config(model_args),
+        callbacks=[logging_callback],  # Ajouter le callback
     )
 
     trainer.train()
@@ -105,8 +164,17 @@ def main(script_args, training_args, model_args):
 
 
 if __name__ == "__main__":
+    import sys
+    
+    # Capturer le chemin du fichier de config depuis les arguments
+    config_file_path = None
+    for i, arg in enumerate(sys.argv):
+        if arg == '--config' and i + 1 < len(sys.argv):
+            config_file_path = sys.argv[i + 1]
+            break
+    
     parser = TrlParser((ScriptArguments, SFTConfig, ModelConfig))
     script_args, training_args, model_args, _ = parser.parse_args_and_config(
         return_remaining_strings=True
     )
-    main(script_args, training_args, model_args)
+    main(script_args, training_args, model_args, config_file_path)

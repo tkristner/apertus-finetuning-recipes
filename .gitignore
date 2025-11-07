@@ -3,3 +3,9 @@
 /.deepspeed_env
 /data
 /my_datasets
+.archive_old_scripts
+.archive_old_docs
+*.png
+PIPELINE_SUMMARY.txt
+LOGGING_SUMMARY.txt
+dataset_creation.log
